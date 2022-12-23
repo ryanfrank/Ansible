@@ -1,0 +1,91 @@
+#author : ryan_w_frank@mac.com
+##Version : 1.0
+- name: Install and configure AD authentication
+  hosts: cbn-unx-06.the-cabin.home
+  vars_prompt:
+    - name: "ad_domain"
+      prompt: "AD domain to join"
+      private: no
+
+    - name: "bind_password"
+      prompt: "Password for AD admin user"
+      private: yes
+
+###############################################
+#
+  tasks:
+    - name: Set timezone to be New_York
+      shell: timedatectl set-timezone America/New_York
+    - name: Upgrade all packages before we start... 
+      apt:
+        upgrade: dist
+    - name: add required packages for AD Auth
+      register: updatesys
+      apt:
+        update_cache: yes
+        name: sssd-ad,sssd-tools,realmd,adcli,libsss-sudo
+        state: present
+    - name: add required packages for AutoFS/Automounter
+      register: updatesys
+      apt:
+        update_cache: yes
+        name: nfs-common,autofs
+        state: present
+    - name: Remove useless packages
+      apt:
+        autoclean: yes
+    - name: Remove dependencies that are no longer needed
+      apt:
+        autoremove: yes
+    - name: Add auto.home entry in /etc/auto.master
+      ansible.builtin.lineinfile:
+        path: /etc/auto.master
+        backup: true
+        regexp: '^/home\tauto.home\n'
+        insertafter: '^#/net'
+        line: '/home  /etc/auto.home'
+        state: present
+    - name: Create /etc/auto.home and populate with our configuration
+      ansible.builtin.lineinfile:
+        path: /etc/auto.home
+        create: true
+        backup: true
+        regexp: '^\*\s'
+        line: '*       192.168.0.103:/Home/&'
+        state: present
+    - name: Reload and enable AutoFS service
+      ansible.builtin.service:
+        name: autofs
+        enabled: yes
+        state: restarted
+    - name: "Validate AD domain is discoverable."
+      shell: realm discover {{ ad_domain }}
+    - name: "Join AD domain"
+      expect:
+        command: realm join --automatic-id-mapping=no --computer-name={{ inventory_hostname_short }} --os-name={{ ansible_facts['distribution'] }} --os-version={{ ansible_facts['distribution_major_version'] }} --computer-ou="OU=Linux Clients,DC=THE-CABIN,DC=HOME" -U Administrator {{ ad_domain }}
+        responses:
+          (?i)Administrator: "{{ bind_password }}"
+      ignore_errors: yes
+    - name: "Modify SSSD.CONF file for our domain settings."
+      ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "{{ item.section }}"
+        option: "{{ item.option }}"
+        value: "{{ item.value }}"
+        backup: yes
+      with_items:
+        - {section: "sssd", option: "services", value: "nss, pam, sudo"}
+        - {section: "domain/{{ ad_domain }}", option: "fallback_homedir", value: "/home/%u"}
+        - {section: "domain/{{ ad_domain }}", option: "use_fully_qualified_names", value: "False"}
+        - {section: "domain/{{ ad_domain }}", option: "ldap_user_uid_number", value: "uidNumber"}
+        - {section: "domain/{{ ad_domain }}", option: "ldap_user_gid_number", value: "gidNumber"}
+    - name: "Update sudoers to allow AD group"
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/99-adsys-privilege-enforcement
+        create: true
+        backup: true
+        regexp: '^\%sudo-users'
+        line: '%sudo-users ALL=(ALL) ALL'
+        state: present
+    - name: Reboot host before continuing
+      ansible.builtin.reboot:

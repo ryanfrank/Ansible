@@ -1,0 +1,60 @@
+#author : ryan_w_frank@mac.com
+##Version : 1.0
+- name: Install and setup Kubernetes 
+  hosts: cbn-unx-06.the-cabin.home
+
+###############################################
+#
+  tasks:
+    - name: "Check for kubernetes GPG repo key."
+      stat:
+        path: /etc/apt/trusted.gpg.d/k8s.gpg
+      register: kube_key
+    - name: "Download kubernetes GPG repo key if needed."
+      ansible.builtin.get_url:
+        url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+        dest: /tmp/kube_gpg.key
+        timeout: 45
+        mode: '0744'
+      when: kube_key.stat.exists == False
+    - name: "Install kubernetes repo key if missing."
+      ansible.builtin.shell: /usr/bin/gpg --dearmor -o /etc/apt/trusted.gpg.d/k8s.gpg < /tmp/kube_gpg.key
+      when: kube_key.stat.exists == False
+    - name: "Add Kubernetes repo to apt sources"
+      shell: echo 'deb https://apt.kubernetes.io/ kubernetes-xenial main' | tee /etc/apt/sources.list.d/kubernetes.list
+    - name: "install Kubernetes packages."
+      register: updatesys
+      apt:
+        update_cache: yes
+        name: wget,make,curl,vim,git,kubelet,kubeadm,kubectl
+    - name: "Disable swap for current session"
+      command: swapoff -a
+    - name: "Disable swap permanently, persist reboots"
+      replace:
+        path: /etc/fstab
+        regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+        replace: '#\1\2\3swap\4'
+        backup: yes
+    - name: "Pull base K8 images to prepare the environment."
+      ansible.builtin.shell: kubeadm config images pull
+    - name: "Update /etc/containerd/config.toml to set cGroup."
+      ansible.builtin.lineinfile:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        line: '            SystemdCgroup = true'
+        backup: yes
+    - name: "Update /etc/default/grub to set cGroup options for kernel."
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: 'GRUB_CMDLINE_LINUX=""'
+        line: 'GRUB_CMDLINE_LINUX="cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory"'
+        backup: yes
+    - name: "Update GRUB to apply kernel parameters"
+      command: /usr/sbin/update-grub
+    - name: "Restart and Enable Kubelet service."
+      ansible.builtin.service:
+        name: kubelet
+        enabled: yes
+        state: restarted
+    - name: "Reboot host one last time to apply kernel changes."
+      ansible.builtin.reboot:
