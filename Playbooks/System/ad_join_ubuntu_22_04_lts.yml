@@ -1,18 +1,6 @@
 #author : ryan_w_frank@mac.com
 ##Version : 1.0
-- name: Install and configure AD authentication
-  hosts: cbn-unx-06.the-cabin.home
-  vars_prompt:
-    - name: "ad_domain"
-      prompt: "AD domain to join"
-      private: no
 
-    - name: "bind_password"
-      prompt: "Password for AD admin user"
-      private: yes
-
-###############################################
-#
   tasks:
     - name: Set timezone to be New_York
       shell: timedatectl set-timezone America/New_York
