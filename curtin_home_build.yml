@@ -1,0 +1,62 @@
+#cloud-config
+timezone: "America/New_York"       
+ca_certs:
+  # If present and set to True, the 'remove_defaults' parameter will either
+  # disable all the trusted CA certifications normally shipped with
+  # Alpine, Debian or Ubuntu. On RedHat, this action will delete those
+  # certificates.
+  # This is mainly for very security-sensitive use cases - most users will not
+  # need this functionality.
+  remove_defaults: false
+
+  # If present, the 'trusted' parameter should contain a certificate (or list
+  # of certificates) to add to the system as trusted CA certificates.
+  # Pay close attention to the YAML multiline list syntax.  The example shown
+  # here is for a list of multiline certificates.
+  trusted: 
+  - |
+   -----BEGIN CERTIFICATE-----
+   MIIDfzCCAmegAwIBAgIQKYpAlNDpxo5DadrpCjrxnDANBgkqhkiG9w0BAQsFADBS
+   MRQwEgYKCZImiZPyLGQBGRYESE9NRTEZMBcGCgmSJomT8ixkARkWCVRIRS1DQUJJ
+   TjEfMB0GA1UEAxMWVEhFLUNBQklOLUNCTi1BRC0wMS1DQTAeFw0yMzA5MTcxNTUw
+   NTNaFw0yODA5MTcxNjAwNTNaMFIxFDASBgoJkiaJk/IsZAEZFgRIT01FMRkwFwYK
+   CZImiZPyLGQBGRYJVEhFLUNBQklOMR8wHQYDVQQDExZUSEUtQ0FCSU4tQ0JOLUFE
+   LTAxLUNBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw1EZ2uiuHB4e
+   tMFUmyDs2odIKIcM1NkddnarO1s9ZUaz2udy2VufAPeeXBXM0Tntkq34mA4cvf4x
+   +356ToeVe3WVhFS7AAmKvLISdvLngC8OkJdOvZVKE7laPj0cahRQcGBBGm7wAz8G
+   4+APwj6YScgVw357BhDN8O4vQvNcInfIjQFxOvF3nfywDpGNtnP+DlHPA8e4lQct
+   F0YQ+eL5Qlui4obMswXIVzcD6IbJtF64LENqCcOYLtAfZwwwu/+U0TnM3KJo24QC
+   /SMUQPGF0eTN2QoHG9gnZPIdDbxA5Wax8h/vaUYxsznh2GSCWQrWYYCJJsaDB4jZ
+   1Bwkd1qUvQIDAQABo1EwTzALBgNVHQ8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAd
+   BgNVHQ4EFgQUiiWcFBTO7b+hr6n1JmAJs38+wm0wEAYJKwYBBAGCNxUBBAMCAQAw
+   DQYJKoZIhvcNAQELBQADggEBAArGcyI8oU1PfnJWmRiUI00dD3ktuoBJSpaDDsqG
+   ytmLk+MjnZh3P85qVEUDdkeWJsXyZiRePGvx1VN1DM7/3mdPLlx5E/7lOzFwe+Ov
+   WT3que6032NLVTI3tQhlM9ihLWqxdhdFVhvYh2q4Bfbp+DclAlSOrJumyG2P+uvC
+   rKd9FSHL0W84Hve4i9s2X8Gve+lgchW6eithxVo4oFnlh/89RuwsrmrCFcWFTVyv
+   xRHWskIctBML8NWrkEp3jKoZ8xlm6NtWwuzWqxwo8sPi+pOP0NTnKJE53tihWYKz
+   kwSUxIIpLEaSS4v/KaMD7HNedV8SigRu/ZXXZpzaQegDBpU=
+   -----END CERTIFICATE-----
+packages:
+  - sssd-ad
+  - sssd-tools
+  - realmd
+  - adcli
+  - libsss-sudo
+  - nfs-common
+  - autofs
+  - curl
+  - gnupg2
+  - software-properties-common
+  - apt-transport-https
+  - wget
+  - make 
+  - curl 
+  - vim 
+  - git
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+ntp:
+  servers: 
+    - 192.168.4.1
+  enabled: true
