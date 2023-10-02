@@ -56,7 +56,3 @@ packages:
 package_update: true
 package_upgrade: true
 package_reboot_if_required: true
-ntp:
-  servers: 
-    - 192.168.4.1
-  enabled: true
